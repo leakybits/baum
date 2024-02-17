@@ -63,8 +63,8 @@ dependencies = [
 
 [[package]]
 name = "proc-util"
-version = "0.2.0"
-source = "git+https://github.com/leakybits/proc-util#a32b8869b1ebf5e3930154f69c4559f8eed37fa1"
+version = "0.3.0"
+source = "git+https://github.com/leakybits/proc-util#9accb2fa46211c520be3a534de32cd9d8523f540"
 dependencies = [
  "itertools",
  "proc-macro2",
