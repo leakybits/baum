@@ -8,14 +8,6 @@ macro_rules! inc {
     }};
 }
 
-macro_rules! identify {
-    ($expr:expr) => {{
-        let expr = ::quote::format_ident!("_{}", $expr);
-
-        ::quote::quote!(#expr)
-    }};
-}
-
 macro_rules! tuplify {
    ($expr:expr) => {{
       let expr = $expr;
@@ -24,4 +16,4 @@ macro_rules! tuplify {
    }};
 }
 
-pub(crate) use {identify, inc, tuplify};
+pub(crate) use {inc, tuplify};

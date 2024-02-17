@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "baum"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "baum-impl",
  "baum-proc",
@@ -63,8 +63,8 @@ dependencies = [
 
 [[package]]
 name = "proc-util"
-version = "0.1.0"
-source = "git+https://github.com/leakybits/proc-util#a40aaec5a74d9141217e853d28bb04878114c3a4"
+version = "0.2.0"
+source = "git+https://github.com/leakybits/proc-util#a32b8869b1ebf5e3930154f69c4559f8eed37fa1"
 dependencies = [
  "itertools",
  "proc-macro2",

@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use syn::*;
 
-use crate::macros::{identify, inc, tuplify};
+use crate::macros::{inc, tuplify};
 
 pub fn expand(expr: Expr) -> TokenStream {
     expand_idx(&mut 0, &expr)

@@ -15,7 +15,7 @@
 
 [dependencies.proc-util]
     git     = "https://github.com/leakybits/proc-util"
-    version = "0.1"
+    version = "0.2"
 
 [lib]
     proc-macro = true
