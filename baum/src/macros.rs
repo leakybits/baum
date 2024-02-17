@@ -30,7 +30,7 @@ macro_rules! alt {
 #[macro_export]
 macro_rules! seq {
     ($head:expr, $($tail:expr),+ $(,)?) => {{
-        use $crate::{*, proc::idx};
+        use $crate::*;
 
         let seq = $head.and(seq!($($tail),+));
         let map = |idx!(($head, ($($tail),+)))| idx!(($head, $($tail),+));

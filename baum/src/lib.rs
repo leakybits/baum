@@ -1,10 +1,13 @@
 //! `baum` is a parser combinator library.
 
+extern crate baum_proc as proc;
+
 mod error;
 mod impls;
 mod macros;
 mod slice;
 
+pub use self::proc::*;
 pub use self::error::*;
 pub use self::slice::*;
 
