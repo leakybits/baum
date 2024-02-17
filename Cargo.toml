@@ -1,0 +1,19 @@
+[workspace]
+    members  = ["baum", "baum-impl", "baum-proc"]
+    resolver = "2"
+
+[workspace.dependencies.baum]
+    path = "baum"
+
+[workspace.dependencies.baum-impl]
+    path = "baum-impl"
+
+[workspace.dependencies.baum-proc]
+    path = "baum-proc"
+
+[workspace.lints.clippy]
+    pedantic = "warn"
+
+[workspace.lints.rust]
+    missing_debug_implementations = "warn"
+    missing_docs                  = "warn"

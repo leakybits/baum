@@ -1,0 +1,13 @@
+[package]
+    edition = "2021"
+    name    = "baum-impl"
+    version = "0.1.0"
+
+[dependencies]
+    thiserror = "1.0"
+
+[dependencies.baum-proc]
+    workspace = true
+
+[lints]
+    workspace = true

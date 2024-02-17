@@ -1,0 +1,5 @@
+# Group the imports by their kind: std first, then external crates, then local imports.
+group_imports = "StdExternalCrate"
+
+# Only merge imports if they're from the same module.
+imports_granularity = "Module"
