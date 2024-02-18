@@ -6,15 +6,6 @@ version = 3
 name = "baum"
 version = "0.1.1"
 dependencies = [
- "baum-impl",
- "baum-proc",
- "thiserror",
-]
-
-[[package]]
-name = "baum-impl"
-version = "0.1.0"
-dependencies = [
  "baum-proc",
  "thiserror",
 ]

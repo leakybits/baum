@@ -1,6 +1,6 @@
-use super::*;
+use crate::*;
 
-impl<S: Copy, T, F: Fn(S) -> Res<S, T>> Parse<S, T> for F {
+impl<S, T, F: Fn(S) -> Res<S, T>> Parse<S, T> for F {
     fn parse(&self, src: S) -> Res<S, T> {
         self(src)
     }
@@ -28,15 +28,49 @@ impl<S: Copy, T, P: Parse<S, T>> ParseExt<S, T> for P {
     }
 
     fn rep(self) -> impl Parse<S, Vec<T>> {
-        move |_: S| todo!()
+        move |mut src: S| {
+            let mut res = Vec::new();
+
+            while let Ok((rem, t)) = ok!(self.parse(src)) {
+                src = rem;
+                res.push(t);
+            }
+
+            Ok((src, res))
+        }
+    }
+
+    fn rep_sep<U>(self, sep: impl Parse<S, U>) -> impl Parse<S, Vec<T>> {
+        move |src: S| {
+            let (src, head) = self.parse(src)?;
+            let (src, tail) = self.as_fn().pfx(sep.as_fn()).rep().parse(src)?;
+
+            Ok((src, std::iter::once(head).chain(tail).collect()))
+        }
     }
 
     fn pfx<U>(self, pfx: impl Parse<S, U>) -> impl Parse<S, T> {
         pfx.and(self).map(|(_, t)| t)
     }
 
+    fn pfx_opt<U>(self, pfx: impl Parse<S, U>) -> impl Parse<S, T> {
+        self.pfx(pfx.opt())
+    }
+
     fn sfx<U>(self, sfx: impl Parse<S, U>) -> impl Parse<S, T> {
         self.and(sfx).map(|(t, _)| t)
+    }
+
+    fn sfx_opt<U>(self, sfx: impl Parse<S, U>) -> impl Parse<S, T> {
+        self.sfx(sfx.opt())
+    }
+
+    fn del<U, V>(self, pfx: impl Parse<S, U>, sfx: impl Parse<S, V>) -> impl Parse<S, T> {
+        self.pfx(pfx).sfx(sfx)
+    }
+
+    fn del_opt<U, V>(self, pfx: impl Parse<S, U>, sfx: impl Parse<S, V>) -> impl Parse<S, T> {
+        self.pfx_opt(pfx).sfx_opt(sfx)
     }
 
     fn map<U>(self, f: impl Fn(T) -> U) -> impl Parse<S, U> {
@@ -70,9 +104,13 @@ impl<S: Copy, T, P: Parse<S, Option<T>>> ParseOpt<S, T> for P {
     fn filter(self, f: impl Fn(&T) -> bool) -> impl Parse<S, Option<T>> {
         self.map(move |t| t.filter(|t| f(t)))
     }
+
+    fn filter_map<U>(self, f: impl Fn(T) -> Option<U>) -> impl Parse<S, Option<U>> {
+        self.map(move |t| t.and_then(|t| f(t)))
+    }
 }
 
-impl<S: Copy, T, P: Parse<S, T>> IntoFn<S, T> for P {
+impl<S, T, P: Parse<S, T>> IntoFn<S, T> for P {
     fn as_fn(&self) -> impl Fn(S) -> Res<S, T> {
         move |src| self.parse(src)
     }
@@ -81,15 +119,3 @@ impl<S: Copy, T, P: Parse<S, T>> IntoFn<S, T> for P {
         move |src| self.parse(src)
     }
 }
-
-macro_rules! ok {
-    ($expr:expr) => {
-        match $expr {
-            Ok(val) => Ok(val),
-            Err($crate::Err::Retry(ctx)) => Err($crate::Err::Retry(ctx)),
-            Err($crate::Err::Abort(ctx)) => return Err($crate::Err::Abort(ctx)),
-        }
-    };
-}
-
-use ok;

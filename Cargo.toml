@@ -1,12 +1,9 @@
 [workspace]
-    members  = ["baum", "baum-impl", "baum-proc"]
+    members  = ["baum", "baum-proc"]
     resolver = "2"
 
 [workspace.dependencies.baum]
     path = "baum"
-
-[workspace.dependencies.baum-impl]
-    path = "baum-impl"
 
 [workspace.dependencies.baum-proc]
     path = "baum-proc"

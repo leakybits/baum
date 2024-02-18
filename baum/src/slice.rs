@@ -1,4 +1,4 @@
-use super::*;
+use crate::*;
 
 /// Parses a single element from the source.
 pub fn any<T>(src: &[T]) -> Res<&[T], &T> {

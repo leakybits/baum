@@ -1,3 +1,15 @@
+/// Return early if the error is `Abort`.
+#[macro_export]
+macro_rules! ok {
+    ($expr:expr) => {
+        match $expr {
+            Ok(val) => Ok(val),
+            Err($crate::Err::Retry(ctx)) => Err($crate::Err::Retry(ctx)),
+            Err($crate::Err::Abort(ctx)) => Err($crate::Err::Abort(ctx))?,
+        }
+    };
+}
+
 /// Create a "retry" error with the given source and message.
 #[macro_export]
 macro_rules! retry {

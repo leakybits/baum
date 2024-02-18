@@ -1,5 +1,3 @@
-use std::result::Result;
-
 /// A parser result type, returning either the parsed value and the remaining source or an error.
 pub type Res<S, T> = Result<(S, T), Err<S>>;
 
