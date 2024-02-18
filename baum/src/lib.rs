@@ -48,6 +48,10 @@ pub trait ParseExt<S: Copy, T>: Parse<S, T> + Sized {
         self.map(Some).or_else(|src| Ok((src, None)))
     }
 
+    fn peek(self) -> impl Parse<S, T> {
+        move |src: S| self.parse(src).map(|(_, t)| (src, t))
+    }
+
     fn rep(self) -> impl Parse<S, Vec<T>> {
         move |mut src: S| {
             let mut res = Vec::new();
