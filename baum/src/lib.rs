@@ -13,81 +13,132 @@ pub use self::slice::*;
 
 /// A parser: given source `S`, parses a value `T` and returns the remaining source.
 pub trait Parse<S, T> {
-    /// Parse a value `T` from source `S`.
+    /// Parse the source and return the remaining source and the parsed value.
     fn parse(&self, src: S) -> Res<S, T>;
+
+    /// Return a reference to the parser.
+    fn as_ref(&self) -> Ref<Self> {
+        Ref(self)
+    }
 }
 
+/// A reference to a parser.
+#[derive(Debug)]
+pub struct Ref<'a, P: ?Sized>(&'a P);
+
 /// Extension methods for `Parse<S, T>`.
-pub trait ParseExt<S, T> {
-    /// If `self` succeeds, apply `rhs`, returning both results.
-    fn and<U>(self, rhs: impl Parse<S, U>) -> impl Parse<S, (T, U)>;
+pub trait ParseExt<S: Copy, T>: Parse<S, T> + Sized {
+    fn and<U>(self, rhs: impl Parse<S, U>) -> impl Parse<S, (T, U)> {
+        self.and_then(move |src, t| rhs.parse(src).map(|(src, u)| (src, (t, u))))
+    }
 
-    /// If `self` fails, apply `rhs`.
-    fn or(self, rhs: impl Parse<S, T>) -> impl Parse<S, T>;
+    fn or(self, rhs: impl Parse<S, T>) -> impl Parse<S, T> {
+        self.or_else(move |src| rhs.parse(src))
+    }
 
-    /// If `self` succeeds, call `f` with the remaining source and parsed value.
-    fn and_then<U>(self, f: impl Fn(S, T) -> Res<S, U>) -> impl Parse<S, U>;
+    fn and_then<U>(self, f: impl Fn(S, T) -> Res<S, U>) -> impl Parse<S, U> {
+        move |src: S| ok!(self.parse(src)).and_then(|(src, t)| f(src, t))
+    }
 
-    /// If `self` fails, call `f` with the remaining source.
-    fn or_else(self, f: impl Fn(S) -> Res<S, T>) -> impl Parse<S, T>;
+    fn or_else(self, f: impl Fn(S) -> Res<S, T>) -> impl Parse<S, T> {
+        move |src: S| ok!(self.parse(src)).or_else(|_| f(src))
+    }
 
-    /// Optionally apply `self`, returning `None` if it fails.
-    fn opt(self) -> impl Parse<S, Option<T>>;
+    fn opt(self) -> impl Parse<S, Option<T>> {
+        self.map(Some).or_else(|src| Ok((src, None)))
+    }
 
-    /// Repeatedly apply `self` until it fails, returning a vector of results.
-    fn rep(self) -> impl Parse<S, Vec<T>>;
+    fn rep(self) -> impl Parse<S, Vec<T>> {
+        move |mut src: S| {
+            let mut res = Vec::new();
 
-    /// Repeatedly apply `self` with the given separator until it fails, returning a vector of results.
-    fn rep_sep<U>(self, sep: impl Parse<S, U>) -> impl Parse<S, Vec<T>>;
+            while let Ok(t) = ok!(self.parse_mut(&mut src)) {
+                res.push(t);
+            }
 
-    /// Parse and discard a prefix using `pfx`, then apply `self`.
-    fn pfx<U>(self, pfx: impl Parse<S, U>) -> impl Parse<S, T>;
+            Ok((src, res))
+        }
+    }
 
-    /// Parse and discard a prefix using `pfx` if present, then apply `self`.
-    fn pfx_opt<U>(self, pfx: impl Parse<S, U>) -> impl Parse<S, T>;
+    fn sep<U>(self, sep: impl Parse<S, U>) -> impl Parse<S, Vec<T>> {
+        move |src: S| {
+            let (src, head) = ok!(self.parse(src))?;
+            let (src, tail) = ok!(self.as_ref().pfx(sep.as_ref()).rep().parse(src))?;
 
-    /// Apply `self`, then parse and discard a suffix using `sfx`.
-    fn sfx<U>(self, sfx: impl Parse<S, U>) -> impl Parse<S, T>;
+            Ok((src, std::iter::once(head).chain(tail).collect()))
+        }
+    }
 
-    /// Apply `self`, then parse and discard a suffix using `sfx` if present.
-    fn sfx_opt<U>(self, sfx: impl Parse<S, U>) -> impl Parse<S, T>;
+    fn pfx<U>(self, pfx: impl Parse<S, U>) -> impl Parse<S, T> {
+        pfx.and(self).map(|(_, t)| t)
+    }
 
-    /// Wrap `self` with the given prefix and suffix parsers.
-    fn del<U, V>(self, pfx: impl Parse<S, U>, sfx: impl Parse<S, V>) -> impl Parse<S, T>;
+    fn pfx_opt<U>(self, pfx: impl Parse<S, U>) -> impl Parse<S, T> {
+        self.pfx(pfx.opt())
+    }
 
-    /// Wrap `self` with the given prefix and suffix parsers if present.
-    fn del_opt<U, V>(self, pfx: impl Parse<S, U>, sfx: impl Parse<S, V>) -> impl Parse<S, T>;
+    fn sfx<U>(self, sfx: impl Parse<S, U>) -> impl Parse<S, T> {
+        self.and(sfx).map(|(t, _)| t)
+    }
 
-    /// Apply `self`, then map the parsed value using `f`.
-    fn map<U>(self, f: impl Fn(T) -> U) -> impl Parse<S, U>;
+    fn sfx_opt<U>(self, sfx: impl Parse<S, U>) -> impl Parse<S, T> {
+        self.sfx(sfx.opt())
+    }
 
-    /// Apply `self`, validating the parsed value using `f`.
-    fn iff(self, f: impl Fn(&T) -> bool) -> impl Parse<S, T>;
+    fn del<U, V>(self, pfx: impl Parse<S, U>, sfx: impl Parse<S, V>) -> impl Parse<S, T> {
+        self.pfx(pfx).sfx(sfx)
+    }
+
+    fn del_opt<U, V>(self, pfx: impl Parse<S, U>, sfx: impl Parse<S, V>) -> impl Parse<S, T> {
+        self.pfx_opt(pfx).sfx_opt(sfx)
+    }
+
+    fn map<U>(self, f: impl Fn(T) -> U) -> impl Parse<S, U> {
+        move |src: S| self.parse(src).map(|(src, t)| (src, f(t)))
+    }
+
+    fn iff(self, f: impl Fn(&T) -> bool) -> impl Parse<S, Option<T>> {
+        self.map(move |t| f(&t).then(|| t))
+    }
 }
 
 /// Extension methods for `Parse<S, Option<T>>`.
-pub trait ParseOpt<S, T> {
-    /// Apply `self`, returning an error if the result is `None`.
-    fn ok(self) -> impl Parse<S, T>;
+pub trait ParseOptExt<S: Copy, T>: Parse<S, Option<T>> + Sized {
+    fn ok_or(self, err: Err<S>) -> impl Parse<S, T> {
+        self.ok_or_else(move |_| err.clone())
+    }
 
-    /// Apply `self`, returning `err` if the result is `None`.
-    fn ok_or(self, err: Err<S>) -> impl Parse<S, T>;
+    fn ok_or_else(self, f: impl Fn(S) -> Err<S>) -> impl Parse<S, T> {
+        self.and_then(move |src, t| Ok((src, t.ok_or_else(|| f(src))?)))
+    }
 
-    /// Apply `self`, returning an error from `f` if the result is `None`.
-    fn ok_or_else(self, f: impl Fn(S) -> Err<S>) -> impl Parse<S, T>;
+    fn filter(self, f: impl Fn(&T) -> bool) -> impl Parse<S, Option<T>> {
+        self.map(move |t| t.filter(|t| f(t)))
+    }
 
-    /// Apply `self`, filtering the result using `f`.
-    fn filter(self, f: impl Fn(&T) -> bool) -> impl Parse<S, Option<T>>;
-
-    /// Apply `self`, filtering and mapping the result using `f`.
-    fn filter_map<U>(self, f: impl Fn(T) -> Option<U>) -> impl Parse<S, Option<U>>;
+    fn filter_map<U>(self, f: impl Fn(T) -> Option<U>) -> impl Parse<S, Option<U>> {
+        self.map(move |t| t.and_then(|t| f(t)))
+    }
 }
 
-/// Convert a parser into a function.
-pub trait IntoFn<S, T> {
-    /// Return `self` as a function.
-    fn as_fn(&self) -> impl Fn(S) -> Res<S, T>;
+/// Extension methods for `Parse<S, Result<T, E>>`.
+pub trait ParseResExt<S: Copy, T, E>: Parse<S, Result<T, E>> + Sized {
+    fn map_ok<U>(self, f: impl Fn(T) -> U) -> impl Parse<S, Result<U, E>> {
+        self.map(move |res| res.map(&f))
+    }
 
-    /// Convert `self` into a function.
-    fn into_fn(self) -> impl Fn(S) -> Res<S, T>;
+    fn map_err<U>(self, f: impl Fn(E) -> U) -> impl Parse<S, Result<T, U>> {
+        self.map(move |res| res.map_err(&f))
+    }
+}
+
+/// Parse the source in place.
+pub trait ParseMut<S: Copy, T>: Parse<S, T> {
+    fn parse_mut(&self, src: &mut S) -> Result<T, Err<S>> {
+        let (rem, t) = self.parse(*src)?;
+
+        *src = rem;
+
+        Ok(t)
+    }
 }
