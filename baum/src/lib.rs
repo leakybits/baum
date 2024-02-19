@@ -44,8 +44,8 @@ pub trait ParseExt<S: Copy, T>: Parse<S, T> + Sized {
         move |src: S| ok!(self.parse(src)).or_else(|_| f(src))
     }
 
-    fn then<U>(self, then: impl Fn(S, &T) -> Res<S, U>) -> impl Parse<S, (T, U)> {
-        self.and_then(move |src, t| then(src, &t).map(|(src, u)| (src, (t, u))))
+    fn then<P: Parse<S, U>, U>(self, then: impl Fn(&T) -> P) -> impl Parse<S, (T, U)> {
+        self.and_then(move |src, t| then(&t).parse(src).map(|(src, u)| (src, (t, u))))
     }
 
     fn opt(self) -> impl Parse<S, Option<T>> {
