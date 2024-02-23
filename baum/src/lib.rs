@@ -106,7 +106,7 @@ pub trait ParseExt<S: Copy, T>: Parse<S, T> + Sized {
     }
 
     fn iff(self, f: impl Fn(&T) -> bool) -> impl Parse<S, Option<T>> {
-        self.map(move |t| f(&t).then(|| t))
+        self.opt().filter(move |t| f(t))
     }
 }
 
