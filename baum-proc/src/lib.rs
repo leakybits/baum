@@ -12,5 +12,5 @@ mod macros;
 /// Converts a (possibly nested) tuple of expressions into an (equally nested) tuple of unique identifiers.
 #[proc_macro]
 pub fn idx(args: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    render!(args, { idx::expand(args) })
+    render!(args, { idx::expand(&args) })
 }

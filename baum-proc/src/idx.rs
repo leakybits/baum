@@ -1,11 +1,11 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::*;
+use syn::Expr;
 
 use crate::macros::{inc, tuplify};
 
-pub fn expand(expr: Expr) -> TokenStream {
-    expand_idx(&mut 0, &expr)
+pub fn expand(expr: &Expr) -> TokenStream {
+    expand_idx(&mut 0, expr)
 }
 
 fn expand_idx(idx: &mut usize, expr: &Expr) -> TokenStream {

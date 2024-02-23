@@ -14,6 +14,9 @@ pub use self::slice::*;
 /// A parser: given source `S`, parses a value `T` and returns the remaining source.
 pub trait Parse<S, T> {
     /// Parse the source and return the remaining source and the parsed value.
+    ///
+    /// # Errors
+    /// Returns an error if the source cannot be parsed.
     fn parse(&self, src: S) -> Res<S, T>;
 
     /// Return a reference to the parser.
@@ -22,7 +25,32 @@ pub trait Parse<S, T> {
     }
 }
 
+/// Parse the source in place.
+pub trait ParseMut<S: Copy, T>: Parse<S, T> {
+    /// Parse the source in place and return the parsed value.
+    ///
+    /// # Errors
+    /// Returns an error if the source cannot be parsed.
+    fn parse_mut(&self, src: &mut S) -> Result<T, Err<S>> {
+        let (rem, t) = self.parse(*src)?;
+
+        *src = rem;
+
+        Ok(t)
+    }
+}
+
+/// Attaches context to a parser.
+pub trait ParseCtx<S: Copy, T>: Parse<S, T> + Sized {
+    /// Attach context to the parser.
+    fn with_ctx(self, msg: &impl ToString) -> impl Parse<S, T> {
+        move |src: S| self.parse(src).map_err(|e| e.with_ctx(src, msg))
+    }
+}
+
 /// A reference to a parser.
+///
+/// This enables a reference to a parser to be used as a parser itself.
 #[derive(Debug)]
 pub struct Ref<'a, P: ?Sized>(&'a P);
 
@@ -137,16 +165,5 @@ pub trait ParseResExt<S: Copy, T, E>: Parse<S, Result<T, E>> + Sized {
 
     fn map_err<U>(self, f: impl Fn(E) -> U) -> impl Parse<S, Result<T, U>> {
         self.map(move |res| res.map_err(&f))
-    }
-}
-
-/// Parse the source in place.
-pub trait ParseMut<S: Copy, T>: Parse<S, T> {
-    fn parse_mut(&self, src: &mut S) -> Result<T, Err<S>> {
-        let (rem, t) = self.parse(*src)?;
-
-        *src = rem;
-
-        Ok(t)
     }
 }

@@ -13,12 +13,12 @@ pub enum Err<S> {
 
 impl<S> Err<S> {
     /// Create a new "retry" error.
-    pub fn retry(src: S, msg: impl ToString) -> Self {
+    pub fn retry(src: S, msg: &impl ToString) -> Self {
         Err::Retry(Ctx::new(src, msg))
     }
 
     /// Create a new "abort" error.
-    pub fn abort(src: S, msg: impl ToString) -> Self {
+    pub fn abort(src: S, msg: &impl ToString) -> Self {
         Err::Abort(Ctx::new(src, msg))
     }
 
@@ -34,17 +34,18 @@ impl<S> Err<S> {
 /// A helper trait for adding context to types.
 pub trait WithCtx<S> {
     /// Attach context to the value.
-    fn with_ctx(self, src: S, msg: impl ToString) -> Self;
+    #[must_use]
+    fn with_ctx(self, src: S, msg: &impl ToString) -> Self;
 }
 
 impl<S> WithCtx<S> for Err<S> {
-    fn with_ctx(self, src: S, msg: impl ToString) -> Self {
+    fn with_ctx(self, src: S, msg: &impl ToString) -> Self {
         self.map_ctx(|ctx| ctx.wrap(src, msg))
     }
 }
 
 impl<S, T> WithCtx<S> for Res<S, T> {
-    fn with_ctx(self, src: S, msg: impl ToString) -> Self {
+    fn with_ctx(self, src: S, msg: &impl ToString) -> Self {
         self.map_err(|e| e.with_ctx(src, msg))
     }
 }
@@ -73,7 +74,7 @@ impl<S> Ctx<S> {
         self.ctx.as_deref()
     }
 
-    fn new(src: S, msg: impl ToString) -> Self {
+    fn new(src: S, msg: &impl ToString) -> Self {
         Ctx {
             src,
             msg: msg.to_string(),
@@ -81,7 +82,7 @@ impl<S> Ctx<S> {
         }
     }
 
-    fn wrap(self, src: S, msg: impl ToString) -> Self {
+    fn wrap(self, src: S, msg: &impl ToString) -> Self {
         Ctx {
             src,
             msg: msg.to_string(),

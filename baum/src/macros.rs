@@ -14,7 +14,7 @@ macro_rules! ok {
 #[macro_export]
 macro_rules! retry {
     ($src:expr, $($tt:tt)*) => {
-        $crate::Err::retry($src, format!($($tt)*))
+        $crate::Err::retry($src, &format!($($tt)*))
     };
 }
 
@@ -22,7 +22,7 @@ macro_rules! retry {
 #[macro_export]
 macro_rules! abort {
     ($src:expr, $($tt:tt)*) => {
-        $crate::Err::abort($src, format!($($tt)*))
+        $crate::Err::abort($src, &format!($($tt)*))
     };
 }
 
