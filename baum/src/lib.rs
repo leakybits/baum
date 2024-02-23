@@ -43,7 +43,7 @@ pub trait ParseMut<S: Copy, T>: Parse<S, T> {
 /// Attaches context to a parser.
 pub trait ParseCtx<S: Copy, T>: Parse<S, T> + Sized {
     /// Attach context to the parser.
-    fn with_ctx(self, msg: &impl ToString) -> impl Parse<S, T> {
+    fn with_ctx(self, msg: &str) -> impl Parse<S, T> {
         move |src: S| self.parse(src).map_err(|e| e.with_ctx(src, msg))
     }
 }
